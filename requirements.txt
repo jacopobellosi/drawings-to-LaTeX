@@ -1,3 +1,5 @@
-Flask
-Pillow
-Pix2Text
+Flask==3.0.0
+Pillow==10.0.1
+pix2text
+gunicorn==21.2.0
+python-dotenv==1.0.0
