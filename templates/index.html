@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Formula Drawer</title>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.css" integrity="sha384-o3WH+1yEhq+grOgz1BVYTZPyTlMXrDxnjN1By9/ba94JqJhva6wFm2Hb+URQX53v" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.js" integrity="sha384-C5yZTsgLOfuizO9kb+hrB8uSBwwvZ4yenKWU0KmWl+7bkL6Tph/KbcOa3S4zdoRE" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    #canvas { border: 2px solid black; cursor: crosshair; touch-action: none; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; }
+    #latex, #preview { font-size: 18px; margin-top: 20px; }
+    #latex { 
+      background-color: #f5f5f5; 
+      padding: 15px; 
+      border-radius: 5px; 
+      text-align: left; 
+      max-width: 800px; 
+      margin: 20px auto; 
+      position: relative;
+    }
+    #preview { 
+      border: 1px solid #ddd; 
+      padding: 20px; 
+      margin: 20px auto; 
+      max-width: 800px; 
+      background-color: white; 
+      border-radius: 5px; 
+      min-height: 50px;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .copy-btn:hover {
+      background: #005a9e;
+    }
+    .error {
+      color: red;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Disegna la tua formula</h1>
+  <canvas id="canvas" width="800" height="400"></canvas><br>
+  <button onclick="convert()">Converti in LaTeX</button>
+  <button onclick="clearCanvas()">Pulisci</button>
+
+  <h2>Codice LaTeX:</h2>
+  <div style="position: relative; max-width: 800px; margin: 0 auto;">
+    <pre id="latex"></pre>
+    <button class="copy-btn" onclick="copyLatex()" style="display: none;">Copia</button>
+  </div>
+  <h2>Anteprima:</h2>
+  <div id="preview"></div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let drawing = false;
+
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "black";
+
+    // ---- Mouse events ----
+    canvas.addEventListener("mousedown", (e) => startDrawing(e.offsetX, e.offsetY));
+    canvas.addEventListener("mouseup", stopDrawing);
+    canvas.addEventListener("mouseleave", stopDrawing);
+    canvas.addEventListener("mousemove", (e) => draw(e.offsetX, e.offsetY));
+
+    // ---- Touch events ----
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      startDrawing(touch.clientX - rect.left, touch.clientY - rect.top);
+    });
+
+    canvas.addEventListener("touchend", stopDrawing);
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      draw(touch.clientX - rect.left, touch.clientY - rect.top);
+    });
+
+    function startDrawing(x, y) {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function stopDrawing() {
+      drawing = false;
+    }
+
+    function draw(x, y) {
+      if (!drawing) return;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Aggiungi sfondo bianco
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "black"; // Ripristina il colore di disegno
+    }
+
+    // Inizializza il canvas con sfondo bianco
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "black";
+
+    async function convert() {
+      const dataURL = canvas.toDataURL("image/png");
+      try {
+        const res = await fetch("/convert", {
+          method: "POST",
+          body: JSON.stringify({ image: dataURL }),
+          headers: { "Content-Type": "application/json" }
+        });
+        const result = await res.json();
+        
+        // Mostra il codice LaTeX
+        document.getElementById("latex").textContent = result.latex;
+        document.querySelector(".copy-btn").style.display = "block";
+        
+        // Prova a renderizzare l'anteprima
+        try {
+          // Rimuovi i delimitatori $$ all'inizio e alla fine per KaTeX
+          let latexForRendering = result.latex.trim();
+          if (latexForRendering.startsWith('$$') && latexForRendering.endsWith('$$')) {
+            latexForRendering = latexForRendering.slice(2, -2).trim();
+          } else if (latexForRendering.startsWith('$') && latexForRendering.endsWith('$')) {
+            latexForRendering = latexForRendering.slice(1, -1).trim();
+          }
+          
+          katex.render(latexForRendering, document.getElementById("preview"), {
+            displayMode: true // Usa il modo display per le formule matematiche
+          });
+        } catch (katexError) {
+          document.getElementById("preview").innerHTML = 
+            '<div class="error">Errore nel rendering LaTeX: ' + katexError.message + '</div>';
+        }
+      } catch (error) {
+        document.getElementById("latex").textContent = "Errore nella conversione: " + error.message;
+        document.getElementById("preview").innerHTML = 
+          '<div class="error">Impossibile convertire l\'immagine</div>';
+      }
+    }
+
+    function copyLatex() {
+      const latexCode = document.getElementById("latex").textContent;
+      navigator.clipboard.writeText(latexCode).then(() => {
+        const btn = document.querySelector(".copy-btn");
+        const originalText = btn.textContent;
+        btn.textContent = "Copiato!";
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error('Errore nella copia:', err);
+      });
+    }
+  </script>
+</body>
+</html>
