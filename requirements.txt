@@ -1,5 +1,9 @@
+# Alternative: requirements per modello più leggero
 Flask==3.0.0
 Pillow==10.0.1
-pix2text[formula]==0.3.0
+# Invece di pix2text, usa una alternativa più leggera
+transformers==4.35.0
+torch==2.0.0 --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.15.0 --index-url https://download.pytorch.org/whl/cpu
 gunicorn==21.2.0
 python-dotenv==1.0.0
