@@ -33,12 +33,26 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32))
 
 # Inizializza il modello
-try:
-    p2t = Pix2Text.from_config()
-    logger.info("Pix2Text model loaded successfully")
-except Exception as e:
-    logger.error(f"Failed to load Pix2Text model: {e}")
-    p2t = None
+p2t = None  # Caricamento lazy
+
+def get_model():
+    """Carica il modello solo quando necessario per risparmiare memoria"""
+    global p2t
+    if p2t is None:
+        try:
+            logger.info("Loading Pix2Text model (lazy loading)...")
+            # Usa configurazione minimale per ridurre memoria
+            p2t = Pix2Text.from_config(
+                total_configs={
+                    'layout': {'model_name': 'mfd'},  # Modello più leggero
+                    'formula': {'model_name': 'latex-ocr'},  # Solo formula OCR
+                }
+            )
+            logger.info("Pix2Text model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load Pix2Text model: {e}")
+            p2t = None
+    return p2t
 
 # Costanti
 MAX_IMAGE_SIZE = (2048, 2048)  # Dimensione massima immagine
@@ -124,7 +138,8 @@ def convert():
             return jsonify({"error": "Campo 'image' mancante"}), 400
         
         # Controlla se il modello è caricato
-        if p2t is None:
+        model = get_model()
+        if model is None:
             return jsonify({"error": "Servizio temporaneamente non disponibile"}), 503
         
         logger.info("Processing image conversion request")
@@ -139,7 +154,7 @@ def convert():
             logger.info(f"Image saved to temporary file: {temp_file_path}")
         
         # Riconosci il testo/formula
-        latex_code = p2t.recognize_text_formula(temp_file_path)
+        latex_code = model.recognize_text_formula(temp_file_path)
         logger.info(f"LaTeX code generated successfully: {len(latex_code)} characters")
         
         return jsonify({
