@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import base64
 import io
 import os
+import sys
 import tempfile
 import logging
 from datetime import datetime
@@ -29,7 +30,21 @@ app = Flask(__name__)
 
 # Configurazione per production
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32))
+
+# Genera SECRET_KEY automaticamente se non presente
+secret_key = os.environ.get('SECRET_KEY')
+if not secret_key:
+    import secrets
+    secret_key = secrets.token_hex(32)
+    logger.warning("SECRET_KEY not found in environment, generated automatically")
+    logger.info("For production, set SECRET_KEY environment variable")
+
+app.config['SECRET_KEY'] = secret_key
+
+# Log della configurazione all'avvio
+logger.info(f"Flask app starting with SECRET_KEY configured: {bool(app.config['SECRET_KEY'])}")
+logger.info(f"Max content length: {app.config['MAX_CONTENT_LENGTH']}")
+logger.info(f"Environment PORT: {os.environ.get('PORT', 'Not set')}")
 
 # Costanti
 MAX_IMAGE_SIZE = (1024, 1024)
@@ -124,9 +139,34 @@ def health_check():
         "mode": "p2t-only",
         "available_apis": {
             "p2t": True  # 10.000 caratteri/giorno
+        },
+        "environment": {
+            "port": os.environ.get('PORT', 'Not set'),
+            "flask_env": os.environ.get('FLASK_ENV', 'Not set'),
+            "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         }
     }
     return jsonify(status)
+
+@app.route("/debug")
+def debug_info():
+    """Debug endpoint per Railway"""
+    import sys
+    debug_data = {
+        "python_version": sys.version,
+        "flask_version": "3.0.0",
+        "working_directory": os.getcwd(),
+        "environment_vars": {
+            "PORT": os.environ.get('PORT'),
+            "FLASK_ENV": os.environ.get('FLASK_ENV'),
+            "SECRET_KEY_SET": bool(os.environ.get('SECRET_KEY'))
+        },
+        "app_config": {
+            "SECRET_KEY_SET": bool(app.config.get('SECRET_KEY')),
+            "MAX_CONTENT_LENGTH": app.config.get('MAX_CONTENT_LENGTH')
+        }
+    }
+    return jsonify(debug_data)
 
 @app.route("/convert", methods=["POST"])
 def convert():
