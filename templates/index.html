@@ -51,17 +51,17 @@
   </style>
 </head>
 <body>
-  <h1>Disegna la tua formula</h1>
+  <h1>Draw your formula:</h1>
   <canvas id="canvas" width="800" height="400"></canvas><br>
-  <button onclick="convert()">Converti in LaTeX</button>
-  <button onclick="clearCanvas()">Pulisci</button>
+  <button onclick="convert()">Convert to LaTeX</button>
+  <button onclick="clearCanvas()">Clear</button>
 
-  <h2>Codice LaTeX:</h2>
+  <h2>LaTeX code:</h2>
   <div style="position: relative; max-width: 800px; margin: 0 auto;">
     <pre id="latex"></pre>
-    <button class="copy-btn" onclick="copyLatex()" style="display: none;">Copia</button>
+    <button class="copy-btn" onclick="copyLatex()" style="display: none;">Copy</button>
   </div>
-  <h2>Anteprima:</h2>
+  <h2>Preview:</h2>
   <div id="preview"></div>
 
   <script>

@@ -32,6 +32,17 @@ The app reads the `PORT` environment variable (defaults to `5000`). To change it
 docker run --rm -p 8080:8080 -e PORT=8080 jacopobellosi/drawings-to-latex:latest
 ```
 
+## Preview
+Below are a couple of screenshots that show how the app works and the kind of output it produces. The images are included in the `preview/` folder.
+
+![Clean input example](preview/clean.png)
+
+Caption: example of a cleaned hand-drawn input image used by the pipeline.
+
+![Formula example output](preview/formula_example.png)
+
+Caption: sample input/formula image and the LaTeX-like output produced by the local pipeline.
+
 ## Notes & recommendations
 - The repository uses `Pix2Text` (declared in `requirements.txt`). Make sure that package is available and installs cleanly (it may have extra native deps). If `Pix2Text` requires extra system libraries, add them to the `apt-get install` line in the `Dockerfile`.
 - For production use, consider replacing the Flask development server with a WSGI server like `gunicorn` (e.g. `gunicorn -w 4 -b 0.0.0.0:$PORT app:app`).
