@@ -1,175 +1,50 @@
-# 🎯 LaTeX OCR - Handwritten Math to LaTeX
+# drawings-to-LaTeX
 
-> Convert handwritten mathematical formulas to LaTeX code with AI-powered OCR
+Small Flask app that converts a hand-drawn/math image to LaTeX using Pix2Text.
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/deploy)
+This repository contains a minimal web UI and a backend API implemented in `app.py`.
 
-## ✨ Features
+## What I added
+- `Dockerfile` - builds a small image based on `python:3.11-slim` and installs requirements
+- `.dockerignore` - keeps the image small by excluding common files
+- `README.md` - this file
 
-- 🖋️ **Draw formulas** with mouse or touch
-- 🤖 **AI-powered recognition** using Pix2Text
-- 📝 **Real-time LaTeX preview** with KaTeX
-- 📋 **One-click copy** of generated LaTeX code
-- 📱 **Mobile-friendly** responsive design
-- 🚀 **Production-ready** with Docker support
+## Build and run with Docker (PowerShell)
 
-## 🚀 Quick Start
+Build the image (replace `yourname/drawings-to-latex` with your image name):
 
-### Online Demo
-👉 **[Try it live!](https://your-app.up.railway.app)** (Replace with your deployed URL)
-
-### Local Development
-```bash
-# Clone repository
-git clone https://github.com/yourusername/latex-ocr-app.git
-cd latex-ocr-app
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run development server
-python app.py
-
-# Open http://localhost:5000
+```powershell
+docker build -t yourname/drawings-to-latex:latest .
 ```
 
-## 🎮 How to Use
+Run the container locally and map port 5000:
 
-1. **Draw** your mathematical formula on the canvas
-2. **Click** "Converti in LaTeX" to process
-3. **View** the generated LaTeX code and live preview
-4. **Copy** the LaTeX code with one click
-
-![Demo GIF](https://via.placeholder.com/600x300/f0f0f0/333?text=Add+Demo+GIF+Here)
-
-## 🛠️ Tech Stack
-
-- **Backend**: Flask, Pix2Text, PIL
-- **Frontend**: HTML5 Canvas, KaTeX, Vanilla JS
-- **Deployment**: Docker, Gunicorn
-- **AI/ML**: Pix2Text for formula recognition
-
-## 🚀 Deployment in Produzione
-
-### Opzione 1: Docker (Raccomandato)
-
-```bash
-# Clona il repository
-git clone <your-repo-url>
-cd latexocr
-
-# Copia e modifica le variabili d'ambiente
-cp .env.example .env
-# Modifica .env con i tuoi valori
-
-# Build e avvia con Docker Compose
-docker-compose up -d
-
-# L'applicazione sarà disponibile su http://localhost:5000
+```powershell
+docker run --rm -p 5000:5000 yourname/drawings-to-latex:latest
 ```
 
-### Opzione 2: Deployment Tradizionale
+Open http://localhost:5000 in your browser.
 
-```bash
-# Installa dipendenze
-pip install -r requirements.txt
+## Environment / Configuration
+The app reads the `PORT` environment variable (defaults to `5000`). To change it when running with docker:
 
-# Configura variabili d'ambiente
-export FLASK_ENV=production
-export SECRET_KEY="your-secret-key-here"
-
-# Avvia con Gunicorn
-gunicorn --config gunicorn.conf.py app:app
+```powershell
+docker run --rm -p 8080:8080 -e PORT=8080 yourname/drawings-to-latex:latest
 ```
 
-### Opzione 3: Heroku
+## Notes & recommendations
+- The repository uses `Pix2Text` (declared in `requirements.txt`). Make sure that package is available and installs cleanly (it may have extra native deps). If `Pix2Text` requires extra system libraries, add them to the `apt-get install` line in the `Dockerfile`.
+- For production use, consider replacing the Flask development server with a WSGI server like `gunicorn` (e.g. `gunicorn -w 4 -b 0.0.0.0:$PORT app:app`).
+- The `Dockerfile` installs minimal build dependencies needed by Pillow. If you see build failures during pip install, add the required system packages shown in the error message.
 
-```bash
-# Aggiungi file Procfile
-echo "web: gunicorn --config gunicorn.conf.py app:app" > Procfile
+## Publish to Docker Hub
 
-# Deploy su Heroku
-heroku create your-app-name
-heroku config:set SECRET_KEY="your-secret-key"
-git push heroku main
+```powershell
+docker tag yourname/drawings-to-latex:latest yourdockerhubusername/drawings-to-latex:latest; docker push yourdockerhubusername/drawings-to-latex:latest
 ```
 
-### Opzione 4: Railway/Render/DigitalOcean
+## What I didn't change
+- I left `app.py` and `templates/index.html` unchanged. The server currently runs in debug mode — switch that off for production.
 
-Il progetto è pronto per il deployment su:
-- **Railway**: Rileva automaticamente Python e Dockerfile
-- **Render**: Usa il Dockerfile incluso
-- **DigitalOcean App Platform**: Compatibile con Docker
-
-## 🔧 Configurazione
-
-### Variabili d'Ambiente
-
-- `FLASK_ENV`: `production` per produzione
-- `SECRET_KEY`: Chiave segreta per Flask (IMPORTANTE: cambiarla!)
-- `PORT`: Porta del server (default: 5000)
-- `LOG_LEVEL`: Livello di logging (default: INFO)
-
-### Sicurezza
-
-- ✅ Validazione input
-- ✅ Limite dimensioni file (16MB)
-- ✅ Gestione file temporanei
-- ✅ Rate limiting pronto
-- ✅ Logging completo
-- ✅ Health check endpoint
-
-## 📊 Monitoring
-
-### Health Check
-```bash
-curl http://your-domain.com/health
-```
-
-### Logs
-```bash
-# Con Docker
-docker-compose logs -f
-
-# Con Gunicorn
-tail -f gunicorn.log
-```
-
-## 🔒 Sicurezza
-
-1. **Cambia la SECRET_KEY** in produzione
-2. **Usa HTTPS** (configura reverse proxy)
-3. **Limita accesso** se necessario
-4. **Monitora i logs** per attività sospette
-
-## 🚀 Performance
-
-- Usa **4 worker Gunicorn** per default
-- **File temporanei** puliti automaticamente
-- **Validazione** input per evitare abuse
-- **Timeout** configurati per stabilità
-
-## 📱 Caratteristiche
-
-- ✅ Interfaccia web responsive
-- ✅ Supporto touch per mobile
-- ✅ Anteprima LaTeX in tempo reale
-- ✅ Copia codice LaTeX con un click
-- ✅ Gestione errori user-friendly
-- ✅ Logging completo
-
-## 🔧 Manutenzione
-
-### Aggiornare Dipendenze
-```bash
-pip install --upgrade -r requirements.txt
-```
-
-### Backup
-Non ci sono dati persistenti da backuppare (applicazione stateless).
-
-### Scaling
-Per traffico elevato:
-1. Aumenta i worker Gunicorn
-2. Usa un load balancer
-3. Considera Redis per caching
+## License
+See `LICENSE` in the repo root.

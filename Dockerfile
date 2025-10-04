@@ -1,30 +1,30 @@
 FROM python:3.11-slim
 
-# Aggiorna package list e installa dipendenze minime
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Prevents Python from writing .pyc files and enables faster logging
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=5000
 
-# Crea directory di lavoro
 WORKDIR /app
 
-# Copia requirements e installa dipendenze Python
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Install system dependencies required by Pillow (image handling) and some build tools
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       libjpeg-dev \
+       zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copia il codice dell'applicazione
-COPY . .
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt ./
 
-# Crea un utente non-root
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
-USER app
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Esponi la porta
+# Copy app files
+COPY . /app
+
 EXPOSE 5000
 
-# Comando per avviare l'applicazione
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
+# Simple entrypoint — change to gunicorn or uvicorn if you add production server
+CMD ["python", "app.py"]
