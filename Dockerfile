@@ -3,16 +3,19 @@ FROM python:3.11-slim
 # Prevents Python from writing .pyc files and enables faster logging
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=5000
+    PORT=8080
 
 WORKDIR /app
 
 # Install system dependencies required by Pillow (image handling) and some build tools
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential \
-       libjpeg-dev \
-       zlib1g-dev \
+     && apt-get install -y --no-install-recommends \
+         build-essential \
+         libjpeg-dev \
+         zlib1g-dev \
+         libssl-dev \
+         libffi-dev \
+         pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
@@ -24,7 +27,7 @@ RUN pip install --upgrade pip \
 # Copy app files
 COPY . /app
 
-EXPOSE 5000
+EXPOSE 8080
 
-# Simple entrypoint — change to gunicorn or uvicorn if you add production server
-CMD ["python", "app.py"]
+# Use gunicorn as a more robust production server
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:$PORT", "app:app"]

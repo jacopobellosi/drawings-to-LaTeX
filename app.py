@@ -11,7 +11,14 @@ from pix2text import Pix2Text
 # esempio: from mylib import image_to_latex
 
 app = Flask(__name__)
-p2t = Pix2Text.from_config()
+# lazy init of Pix2Text to avoid long startup during container start
+p2t = None
+
+def get_p2t():
+    global p2t
+    if p2t is None:
+        p2t = Pix2Text.from_config()
+    return p2t
 
 def preprocess_image(data_url):
     # Rimuove il prefisso "data:image/png;base64,"
@@ -42,10 +49,13 @@ def index():
 def convert():
     data = request.get_json()
     img = preprocess_image(data['image'])
-    img.save("debug_input.png")
+    # Save to a temp path (Cloud Run has writable /tmp)
+    debug_path = os.path.join("/tmp", "debug_input.png")
+    img.save(debug_path)
     print("Image received and decoded.")
-    # Usa la tua libreria qui
-    latex_code = p2t.recognize_text_formula("debug_input.png")
+    # Initialize Pix2Text on first use
+    model = get_p2t()
+    latex_code = model.recognize_text_formula(debug_path)
     print("LaTeX code generated:", latex_code)
     return jsonify({"latex": latex_code})
 
