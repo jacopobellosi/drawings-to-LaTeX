@@ -1,23 +1,32 @@
-from flask import Flask,render_template,  request, jsonify
+from flask import Flask, render_template, request, jsonify
 import base64
 import re
 import io
 import os
 from io import BytesIO
 from PIL import Image
-from pix2text import Pix2Text
+import logging
 
-# importa qui la tua libreria per immagine -> LaTeX
-# esempio: from mylib import image_to_latex
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-# lazy init of Pix2Text to avoid long startup during container start
+
+# Global variable for lazy loading
 p2t = None
 
 def get_p2t():
     global p2t
     if p2t is None:
-        p2t = Pix2Text.from_config()
+        try:
+            logger.info("Loading Pix2Text model...")
+            from pix2text import Pix2Text
+            p2t = Pix2Text.from_config()
+            logger.info("Pix2Text model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load Pix2Text model: {e}")
+            raise
     return p2t
 
 def preprocess_image(data_url):
@@ -45,21 +54,46 @@ def preprocess_image(data_url):
 def index():
     return render_template("index.html")
 
+@app.route("/health")
+def health():
+    """Health check endpoint for Cloud Run"""
+    return jsonify({"status": "healthy"}), 200
+
 @app.route("/convert", methods=["POST"])
 def convert():
-    data = request.get_json()
-    img = preprocess_image(data['image'])
-    # Save to a temp path (Cloud Run has writable /tmp)
-    debug_path = os.path.join("/tmp", "debug_input.png")
-    img.save(debug_path)
-    print("Image received and decoded.")
-    # Initialize Pix2Text on first use
-    model = get_p2t()
-    latex_code = model.recognize_text_formula(debug_path)
-    print("LaTeX code generated:", latex_code)
-    return jsonify({"latex": latex_code})
+    try:
+        logger.info("Received conversion request")
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({"error": "No image data provided"}), 400
+            
+        img = preprocess_image(data['image'])
+        
+        # Save to a temp path (Cloud Run has writable /tmp)
+        debug_path = os.path.join("/tmp", "debug_input.png")
+        img.save(debug_path)
+        logger.info("Image preprocessed and saved")
+        
+        # Initialize Pix2Text on first use
+        model = get_p2t()
+        latex_code = model.recognize_text_formula(debug_path)
+        logger.info(f"LaTeX code generated: {latex_code}")
+        
+        # Clean up temp file
+        try:
+            os.remove(debug_path)
+        except:
+            pass
+            
+        return jsonify({"latex": latex_code})
+        
+    except Exception as e:
+        logger.error(f"Error in conversion: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))  # Always use 8080 for Cloud Run
-    app.run(host="0.0.0.0", port=port, debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    logger.info(f"Starting Flask app on port {port}")
+    app.run(host="0.0.0.0", port=port, debug=False)  # Disable debug in production
 
