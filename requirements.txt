@@ -1,4 +1,7 @@
-Flask
 Pillow
 Pix2Text
+gunicorn
+Flask
+Pillow
+pix2text
 gunicorn

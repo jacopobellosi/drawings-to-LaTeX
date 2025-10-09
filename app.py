@@ -60,9 +60,6 @@ def convert():
     return jsonify({"latex": latex_code})
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 8080))  # Always use 8080 for Cloud Run
     app.run(host="0.0.0.0", port=port, debug=True)
-
-from PIL import Image
-import io, base64
 
